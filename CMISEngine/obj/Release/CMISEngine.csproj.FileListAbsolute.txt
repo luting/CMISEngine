@@ -90,8 +90,8 @@ C:\Casewise\Evolve\CMIS\roslyn\VBCSCompiler.exe.config
 C:\Casewise\Evolve\CMIS\CMISEngine.dll.config
 C:\Casewise\Evolve\CMIS\CMISEngine.dll
 C:\Casewise\Evolve\CMIS\CMISEngine.pdb
-C:\dev\TFS\Projects\SPW\CMISEngine\CMISEngine\obj\Release\CMISEngine.csprojResolveAssemblyReference.cache
 C:\dev\TFS\Projects\SPW\CMISEngine\CMISEngine\obj\Release\CMISEngine.Properties.Resources.resources
 C:\dev\TFS\Projects\SPW\CMISEngine\CMISEngine\obj\Release\CMISEngine.csproj.GenerateResource.Cache
 C:\dev\TFS\Projects\SPW\CMISEngine\CMISEngine\obj\Release\CMISEngine.dll
 C:\dev\TFS\Projects\SPW\CMISEngine\CMISEngine\obj\Release\CMISEngine.pdb
+C:\dev\TFS\Projects\SPW\CMISEngine\CMISEngine\obj\Release\CMISEngine.csprojResolveAssemblyReference.cache

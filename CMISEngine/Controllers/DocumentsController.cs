@@ -1,10 +1,7 @@
 ﻿using CMISEngine.CMIS;
 using CMISEngine.Models;
-using System;
-using System.Text.RegularExpressions;
+using System.Collections.Generic;
 using System.Web.Http;
-using System.Web.Mvc;
-using System.Xml;
 
 namespace CMISEngine.Controllers
 {
@@ -25,17 +22,29 @@ namespace CMISEngine.Controllers
         /// <param name="path"></param>
         /// <param name="siteName"></param>
         /// <returns></returns>
-        public DocumentList GetFilter(string path, string siteName)
+        public DocumentList Get(string path, string checkPublishInEvolveFilter)
         {
+            DocumentList allDocuments = new DocumentList();
             CMISQuery query = new CMIS.CMISQuery();
-
-            // uri to string
-            string pathString = path.ToString();
-            //cmis query path
-            pathString = this.TranformToCMISPath(pathString);
+            // string pathString = Utilities.CMISUtilities.AddCMISNamespaceToPath(path.ToString());
             //get documents by path
-            DocumentList list = query.GetDocumentsByPath(pathString);
-            return list;
+            //  DocumentList list = query.GetDocumentsByPath(pathString, onlyEvolveAvailable);
+
+            List<CMISFolder> list = query.GetFoldersByPath(path, checkPublishInEvolveFilter);
+
+            foreach (CMISFolder folder in list)
+            {
+                if (folder.ContainedDocuments == null) { continue; }
+                if (allDocuments.DocumentPropertyMetaData == null && folder.ContainedDocuments.DocumentPropertyMetaData != null)
+                {
+                    allDocuments.DocumentPropertyMetaData = folder.ContainedDocuments.DocumentPropertyMetaData;
+                }
+                if (folder.ContainedDocuments.Documents.Count != 0)
+                {
+                    allDocuments.Documents.AddRange(folder.ContainedDocuments.Documents);
+                }
+            }
+            return allDocuments;
         }
 
         /// <summary>
@@ -43,20 +52,20 @@ namespace CMISEngine.Controllers
         /// </summary>
         /// <param name="path"></param>
         /// <returns></returns>
-        private string TranformToCMISPath(string path)
-        {
-            string formattedCMISPath = null;
-            string[] foldersName = Regex.Split(path, "/");
+        //private string TranformToCMISPath(string path)
+        //{
+        //    string formattedCMISPath = null;
+        //    string[] foldersName = Regex.Split(path, "/");
 
-            foreach (string folderName in foldersName)
-            {
-                if (folderName != "")
-                {
-                    formattedCMISPath = formattedCMISPath + "/cm:" + XmlConvert.EncodeName(folderName);
-                }
-            }
-            return formattedCMISPath;
-        }
+        //    foreach (string folderName in foldersName)
+        //    {
+        //        if (folderName != "")
+        //        {
+        //            formattedCMISPath = formattedCMISPath + "/cm:" + XmlConvert.EncodeName(folderName);
+        //        }
+        //    }
+        //    return formattedCMISPath;
+        //}
 
         /// <summary>
         /// Get All Documents

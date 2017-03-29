@@ -1,18 +1,15 @@
 ﻿using CMISEngine.CMIS.Configuration;
-using CMISEngine.Errors;
 using CMISEngine.Models;
-using DotCMIS;
-using DotCMIS.Client;
-using DotCMIS.Client.Impl;
-using DotCMIS.Data;
+using PortCMIS;
+using PortCMIS.Client;
+using PortCMIS.Client.Impl;
+using PortCMIS.Data;
+//using DotCMIS;
+//using DotCMIS.Client;
+//using DotCMIS.Client.Impl;
+//using DotCMIS.Data;
 using System;
 using System.Collections.Generic;
-using System.Configuration;
-using System.Linq;
-using System.Net;
-using System.Text;
-using System.Web;
-using System.Xml;
 
 namespace CMISEngine.CMIS
 {
@@ -35,10 +32,11 @@ namespace CMISEngine.CMIS
 
                 Dictionary<string, string> parameters = new Dictionary<string, string>();
                 parameters[SessionParameter.BindingType] = BindingType.AtomPub;
-                //  parameters[SessionParameter.AtomPubUrl] = baseUrl + "/cmisatom";
-                parameters[SessionParameter.AtomPubUrl] = baseUrl + "/api/-default-/public/cmis/versions/1.0/atom";
+                //parameters[SessionParameter.AtomPubUrl] = baseUrl + "/cmisatom";
+                parameters[SessionParameter.AtomPubUrl] = baseUrl + "/api/-default-/public/cmis/versions/1.1/atom";
                 parameters[SessionParameter.User] = CMISConnection.User;//"admin";
                 parameters[SessionParameter.Password] = CMISConnection.Password;//"admin";
+
                 //this._documentRepository = CMISConnection.DocumentRepository;
                 //this._externalApplicationProperty = CMISConnection.ExternalApplicationProperty;
 
@@ -48,11 +46,9 @@ namespace CMISEngine.CMIS
             }
             catch
             {
-
                 throw new Exception("Veuillez vérifier la connection aux entrepôts Alfresco: " + CMISConnection.BaseUrl + ". Impossible de se connecter à Alfresco.");
             }
         }
-
 
         /// <summary>
         /// Select Document By Key
@@ -64,23 +60,15 @@ namespace CMISEngine.CMIS
             // List<DocumentInfo> documents = new List<DocumentInfo>();
             //by document name
             //string query = "SELECT * FROM cmis:document d WHERE CONTAINS(d, 'cmis:name:(" + key + ")')";
-
             //by tag
             //string query = " SELECT * FROM cmis:document d WHERE CONTAINS(d, 'TAG:(" + key + ")')";
 
-
             IItemEnumerable<IQueryResult> qr;
-
             string query = null;
 
             if (!String.IsNullOrEmpty(key))
             {
-                 //query = "SELECT * FROM cmis:folder WHERE CONTAINS('PATH:\"/app:company_home/st:sites/cm:spw/cm:documentLibrary//*\"')";
-//                query = " SELECT * FROM " + CMISConnection.DocumentRepository + " d WHERE CONTAINS(d, 'objectId:(337ae234-5ccf-4c66-8276-ae72c3363212)')";
-                 query = " SELECT * FROM " + CMISConnection.DocumentRepository + " d WHERE CONTAINS(d, '" + CMISConnection.ExternalApplicationProperty + "(*" + key + "*)')";
-
-                //query = " SELECT * FROM " + CMISConnection.DocumentRepository + " d WHERE " + CMISConnection.ExternalApplicationProperty + " LIKE '%" + key + "%'";
-                //query = " SELECT * FROM cmis:document WHERE TAG LIKE '%aad-1%'";
+                query = " SELECT * FROM " + CMISConnection.DocumentRepository + " d WHERE CONTAINS(d, '" + CMISConnection.ExternalApplicationProperty + "(*" + key + "*)')";
             }
             else
             {
@@ -97,54 +85,64 @@ namespace CMISEngine.CMIS
             return qr;
         }
 
-
-
-
-        private static IItemEnumerable<IQueryResult> SelectFoldersByPath(string path)
-        {
-            IItemEnumerable<IQueryResult> qr;
-            string query = null;
-
-
-            // query = " SELECT * FROM " + CMISConnection.DocumentRepository + " d WHERE CONTAINS(d, '" + CMISConnection.ExternalApplicationProperty + "(*" + key + "*)')";
-            query = "SELECT * FROM cmis:folder WHERE CONTAINS('PATH:\"/app:company_home/st:sites/cm:spw/cm:documentLibrary//*\"')";
-
-            qr = Session.Query(query, false);
-            return qr;
-        }
-
         /// <summary>
         /// 
         /// </summary>
         /// <param name="path"></param>
         /// <returns></returns>
-        private static IItemEnumerable<IQueryResult> SelectDocumentsByPath(string path)
+        private static IItemEnumerable<IQueryResult> SelectDocumentsByPath(string path, string checkPublishInEvolveFilter)
         {
+            //query = "SELECT * FROM cmis:document WHERE CONTAINS('PATH:\"/app:company_home/st:sites/cm:spw/cm:documentLibrary/cm:Applicatif03/*\"')";
+            //=> select sub folder documents and sub sub folder documents => query = "select * from " + CMISConnection.DocumentRepository + " d where contains(d, 'PATH:\"/app:company_home/st:sites/cm:" + CMISConnection.SiteName + "/cm:documentLibrary" + path + "//*\"')";
+
+            IItemEnumerable<IQueryResult> qr;
+            string query = null, pathFilter = null, checkEvolveFilter = null;
+
+            pathFilter = "PATH:\"/app:company_home/st:sites/cm:" + CMISConnection.SiteName + "/cm:documentLibrary" + path + "/*\"";
+            checkEvolveFilter = CMISConnection.PublishInEvolveProperty + "(" + checkPublishInEvolveFilter + ")";
+
+            query = "select * from " + CMISConnection.DocumentRepository + " d join " + CMISConnection.CustomAspect + " s on d.cmis:objectId = s.cmis:objectId where contains(d, '" + pathFilter + "')";
+
+            if (Convert.ToBoolean(checkPublishInEvolveFilter))
+            {
+                query += "and CONTAINS(s, '" + checkEvolveFilter + "')";
+            }
+            qr = Session.Query(query, false);
+            return qr;
+        }
+        /// <summary>
+        /// select all sub folders according to a path
+        /// </summary>
+        /// <param name="path">a folder path in alfresco </param>
+        /// <returns></returns>
+        private static IItemEnumerable<IQueryResult> SelectFoldersByPath(string path)
+        {
+            // query = "SELECT * FROM cmis:folder WHERE CONTAINS('PATH:\"/app:company_home/st:sites/cm:spw/cm:documentLibrary//*\"')";
+            //only the sub folder, not the sub sub folder=> query = "select * from cmis:folder d where contains(d, 'PATH:\"/app:company_home/st:sites/cm:" + CMISConnection.SiteName + "/cm:documentLibrary" + path + "/*\"')";
             IItemEnumerable<IQueryResult> qr;
             string query = null;
 
-            //query = "SELECT * FROM cmis:document WHERE CONTAINS('PATH:\"/app:company_home/st:sites/cm:spw/cm:documentLibrary/cm:Applicatif03/*\"')";
-            //query = "SELECT * FROM cmis:document WHERE CONTAINS('PATH:\"/app:company_home/st:sites/cm:spw/cm:documentLibrary//*\"')";
-            // query = "select * from " + CMISConnection.DocumentRepository + " where contains('PATH:\"/app:company_home/st:sites/cm:spw/cm:documentLibrary/cm:" + fileName1 + "/cm:Applications/cm:" + fileName2 + "//*\"')";
-            query = "select * from " + CMISConnection.DocumentRepository + " where contains('PATH:\"/app:company_home/st:sites/cm:" + CMISConnection.SiteName + "/cm:documentLibrary" + path + "//*\"')";
+            query = "select * from " + CMISConnection.FolderRepository + " d where contains(d, 'PATH:\"/app:company_home/st:sites/cm:" + CMISConnection.SiteName + "/cm:documentLibrary" + path + "//*\"')";
             qr = Session.Query(query, false);
             return qr;
         }
 
+        /// <summary>
+        /// the key links a document to a cm instance
+        /// </summary>
+        /// <param name="key"></param>
+        /// <returns></returns>
         public DocumentList GetDocumentsByKey(string key)
         {
             List<DocumentInfo> documents = new List<DocumentInfo>();
-
             Dictionary<string, string> propertiesByKey = new Dictionary<string, string>();
-
-            IItemEnumerable<IQueryResult> qr = CMISQuery.SelectDocumentsByKey(key);
             Dictionary<string, DocumentPropertyMetaData> propertyMetaData = null;
+            IItemEnumerable<IQueryResult> qr = CMISQuery.SelectDocumentsByKey(key);
 
             foreach (IQueryResult hit in qr)
             {
                 DocumentInfo doc = new DocumentInfo(hit["d.cmis:objectId"].FirstValue.ToString(), hit["d.cmis:name"].FirstValue.ToString());
                 doc.Properties = this.GetProperties(hit);
-
                 documents.Add(doc);
                 if (propertyMetaData == null)
                 {
@@ -159,49 +157,21 @@ namespace CMISEngine.CMIS
              };
         }
 
-
-        public CMISFolder GetFoldersByPath(string path)
+        public DocumentList GetDocumentsByPath(string path, string checkPublishInEvolveFilter)
         {
-            CMISFolder folder = new CMISFolder(path);
-            IItemEnumerable<IQueryResult> qr = CMISQuery.SelectFoldersByPath(path);
-            foreach (IQueryResult hit in qr)
-            {
-                Dictionary<string, string> FolderProperties = this.GetProperties(hit);
 
-                string pathOfSubFolder = FolderProperties["path"];
-                CMISFolder subFolder = new CMISFolder(pathOfSubFolder);
-                folder.SubFolders.Add(subFolder);
-                //hit.Properties
-            }
-
-            return folder;
-        }
-
-        public DocumentList GetDocumentsByPath(string path)
-        {
+            string pathString = Utilities.CMISUtilities.AddCMISNamespaceToPath(path);
             List<DocumentInfo> documents = new List<DocumentInfo>();
-
             Dictionary<string, string> propertiesByKey = new Dictionary<string, string>();
-
-
             Dictionary<string, DocumentPropertyMetaData> propertyMetaData = null;
-
-
-            IItemEnumerable<IQueryResult> qr = CMISQuery.SelectDocumentsByPath(path);
-
-            //foreach (IQueryResult hit in qr2)
-            //{
-            //    Dictionary<string, string> FolderProperties = this.GetProperties(hit);
-
-            //    DocumentInfo doc = new DocumentInfo(hit["cmis:objectId"].FirstValue.ToString(), hit["cmis:name"].FirstValue.ToString());
-            //    doc.Properties = this.GetProperties(hit);
-            //    folder.ContainedDocuments.Add(doc);
-            //}
+            IItemEnumerable<IQueryResult> qr = CMISQuery.SelectDocumentsByPath(pathString, checkPublishInEvolveFilter);
 
             foreach (IQueryResult hit in qr)
             {
-                DocumentInfo doc = new DocumentInfo(hit["cmis:objectId"].FirstValue.ToString(), hit["cmis:name"].FirstValue.ToString());
+                DocumentInfo doc = new DocumentInfo(hit["d.cmis:objectId"].FirstValue.ToString(), hit["d.cmis:name"].FirstValue.ToString());
                 doc.Properties = this.GetProperties(hit);
+                doc.Path = path;
+
 
                 documents.Add(doc);
                 if (propertyMetaData == null)
@@ -209,12 +179,40 @@ namespace CMISEngine.CMIS
                     propertyMetaData = this.GetDocumentPropertyMetaData(hit);
                 }
             }
-
             return new DocumentList
             {
                 Documents = documents,
                 DocumentPropertyMetaData = propertyMetaData
             };
+        }
+
+        public List<CMISFolder> GetFoldersByPath(string path, string checkPublishInEvolveFilter)
+        {
+            DocumentList documents = new DocumentList();
+            List<CMISFolder> folders = new List<CMISFolder>();
+            CMISFolder folder = new CMISFolder(path);
+
+            folders.Add(folder);
+            string pathString = Utilities.CMISUtilities.AddCMISNamespaceToPath(path);
+            // get documents
+            folder.ContainedDocuments = this.GetDocumentsByPath(path, checkPublishInEvolveFilter);
+            //get sub folders
+            IItemEnumerable<IQueryResult> qr = CMISQuery.SelectFoldersByPath(pathString);
+
+            foreach (IQueryResult hit in qr)
+            {
+                Dictionary<string, string> FolderProperties = this.GetProperties(hit);
+
+                string subFolderPath = FolderProperties["path"];
+                string slicedPath = Utilities.CMISUtilities.sliceDocumentLibraryPath(subFolderPath);
+
+                CMISFolder subFolder = new CMISFolder(slicedPath);
+
+                subFolder.ContainedDocuments = this.GetDocumentsByPath(slicedPath, checkPublishInEvolveFilter);
+
+                folders.Add(subFolder);
+            }
+            return folders;
         }
 
         private Dictionary<string, string> GetProperties(IQueryResult hit)
@@ -250,12 +248,10 @@ namespace CMISEngine.CMIS
                     Id = prop.Id.ToString(),
                     LocalName = prop.LocalName
                 };
-
                 metaDataByKey[prop.LocalName] = metaData;
             }
             return metaDataByKey;
         }
-
 
         public Dictionary<string, DocumentPropertyMetaData> GetDocumentPropertyMetaData()
         {
