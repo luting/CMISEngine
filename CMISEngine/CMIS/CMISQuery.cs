@@ -92,9 +92,6 @@ namespace CMISEngine.CMIS
         /// <returns></returns>
         private static IItemEnumerable<IQueryResult> SelectDocumentsByPath(string path, string checkPublishInEvolveFilter)
         {
-            //query = "SELECT * FROM cmis:document WHERE CONTAINS('PATH:\"/app:company_home/st:sites/cm:spw/cm:documentLibrary/cm:Applicatif03/*\"')";
-            //=> select sub folder documents and sub sub folder documents => query = "select * from " + CMISConnection.DocumentRepository + " d where contains(d, 'PATH:\"/app:company_home/st:sites/cm:" + CMISConnection.SiteName + "/cm:documentLibrary" + path + "//*\"')";
-
             IItemEnumerable<IQueryResult> qr;
             string query = null, pathFilter = null, checkEvolveFilter = null;
 

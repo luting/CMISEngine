@@ -34,6 +34,7 @@ namespace CMISEngine.Models
         //  public string Label { get; set; }
         //  public string ObjectTypeScriptName { get; set; }
         public Dictionary<string, string> Properties { get; set; }
+        
         //
         public DocumentInfo(string id, string name)
         {
